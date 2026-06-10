@@ -1,40 +1,37 @@
-name: Android CI
+name: Build pull request
 
 on:
-  push:
-    branches:
-      - gamehub-608-build
+  workflow_dispatch:
   pull_request:
     branches:
-      - gamehub-608-build
+      - dev
+      - main
+
+permissions:
+  contents: read
 
 jobs:
   build:
+    name: Build
     runs-on: ubuntu-latest
-
-    env:
-      ORG_GRADLE_PROJECT_githubPackagesUsername: ${{ secrets.GITHUB_PACKAGES_USERNAME }}
-      ORG_GRADLE_PROJECT_githubPackagesPassword: ${{ secrets.GITHUB_PACKAGES_PASSWORD }}
-
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup JDK 21
-        uses: actions/setup-java@v4
+        uses: actions/checkout@v5
         with:
-          distribution: temurin
-          java-version: 21
-          cache: gradle
+          fetch-depth: 0
 
-      - name: Grant execute permission
-        run: chmod +x gradlew
-
-      - name: Build APK
-        run: ./gradlew assembleDebug
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
+      - name: Setup Java
+        uses: actions/setup-java@v5
         with:
-          name: app-debug
-          path: app/build/outputs/apk/debug/*.apk
+          distribution: "temurin"
+          java-version: "17"
+
+      - name: Cache Gradle
+        uses: gradle/actions/setup-gradle@v5
+
+      - name: Build patches
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ORG_GRADLE_PROJECT_githubPackagesUsername: ${{ github.actor }}
+          ORG_GRADLE_PROJECT_githubPackagesPassword: ${{ secrets.GITHUB_TOKEN }}
+        run: ./gradlew build --no-daemon
